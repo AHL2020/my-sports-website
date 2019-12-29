@@ -98,7 +98,6 @@ public class SEOGenerator {
                     timestamp = d.toInstant()
                             .atZone(ZoneId.systemDefault())
                             .toLocalDateTime();
-                    //LocalDateTime.ofInstant(mb.getPageCreatedDate(), ZoneOffset.UTC);
                 } else {
                     timestamp = LocalDateTime.ofInstant(Instant.now(), ZoneOffset.UTC);
                 }

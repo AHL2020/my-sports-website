@@ -48,7 +48,7 @@ public class App implements RequestHandler<Object, Object> {
             scraper.process();
 
             // build
-            StaticWebsiteBuilder builder = new StaticWebsiteBuilder();
+            StaticWebsiteBuilder builder = new StaticWebsiteBuilder(StaticWebsiteBuilder.CLOUD);
 
             builder.addSource("Bundesliga", "bundesliga");
             builder.addSource("PremierLeague", "premierLeague");
@@ -58,6 +58,7 @@ public class App implements RequestHandler<Object, Object> {
             builder.addSource("ChampionsLeague", "championsLeague");
             builder.addSource("EuropaLeague", "europaLeague");
             builder.addSource("ECQualification", "euro2020");
+            builder.addSource("Misc", "misc");
 
             builder.setS3bucket("my-sports-website");
             builder.setDatabaseObjectKey("data/database.csv");

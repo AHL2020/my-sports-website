@@ -33,9 +33,13 @@ public class StaticWebsiteBuilder {
     HashMap<String, String> sources = null;
     private int pagesCreated = 0;
 
+    public static int CLOUD = 0;
+    public static int LOCAL = 1;
+    private int deploymentType = StaticWebsiteBuilder.LOCAL;
+
     public static void main(String[] args) {
 
-        StaticWebsiteBuilder builder = new StaticWebsiteBuilder();
+        StaticWebsiteBuilder builder = new StaticWebsiteBuilder(StaticWebsiteBuilder.LOCAL);
 
         builder.addSource("Bundesliga", "bundesliga");
         builder.addSource("PremierLeague", "premierLeague");
@@ -45,6 +49,7 @@ public class StaticWebsiteBuilder {
         builder.addSource("ChampionsLeague", "championsLeague");
         builder.addSource("EuropaLeague", "europaLeague");
         builder.addSource("ECQualification", "euro2020");
+        builder.addSource("Misc", "misc");
 
         builder.setS3bucket("my-sports-website");
         builder.setDatabaseObjectKey("data/database.csv");
@@ -63,9 +68,23 @@ public class StaticWebsiteBuilder {
         builder.generateSEO(websiteUrl, webTitle, webDescr);
     }
 
-    public StaticWebsiteBuilder() {
+    public StaticWebsiteBuilder(int deploymentType) {
+        if(deploymentType < 0 || deploymentType > 1) {
+            this.deploymentType = StaticWebsiteBuilder.LOCAL;
+        } else {
+            this.deploymentType = deploymentType;
+        }
+        System.out.println("[StaticWebsiteBuilder] running in [" + getDeploymentTypeName() + "] mode.");
         s3 = AmazonS3ClientBuilder.standard().withRegion(REGION).build();
         sources = new HashMap<String, String>();
+    }
+
+    public int getDeploymentType() {
+        return this.deploymentType;
+    }
+
+    public String getDeploymentTypeName() {
+        if(this.deploymentType == StaticWebsiteBuilder.CLOUD) return "CLOUD"; else return "LOCAL";
     }
 
     public void addSource(String nameKey, String templateKey) {
@@ -261,12 +280,18 @@ public class StaticWebsiteBuilder {
                 cfg.clearTemplateCache();
                 Template template = cfg.getTemplate(templateName);
 
-        // ======================================================
-        //                     Lambda Deployment
-        // ======================================================
+                // ======================================================
+                //                     Lambda Deployment
+                // ======================================================
 
-                File outHtml = new File(htmlFileName);
-                //File outHtml = new File("/tmp/tmp.html"); // for lambda deployment
+                File outHtml = null;
+                if(this.deploymentType == StaticWebsiteBuilder.LOCAL) {
+                    // for local deployment
+                    outHtml = new File(htmlFileName);
+                } else {
+                    // for lambda deployment
+                    outHtml = new File("/tmp/tmp.html");
+                }
 
                 Writer out = null;
                 out = new OutputStreamWriter(
@@ -413,7 +438,17 @@ public class StaticWebsiteBuilder {
         //System.out.println(urls);
 
         LinkedList<MatchUrlBean> list = new LinkedList<MatchUrlBean>();
-        urls = urls.substring(1, urls.length()-1);
+
+        // in case the list was previously stored using the LinkedList.toString()
+        // method, we need to check and if needed, remove the [ and ] characters
+        if(urls.indexOf("[") == 0 && urls.indexOf("]") == urls.length()-1) {
+            //System.out.println("before:"+urls);
+            urls = urls.substring(1, urls.length() - 1);
+            //System.out.println("after:"+urls);
+        } else {
+            //System.out.println("ok:"+urls);
+        }
+
         String[] tokens = urls.split(",");
         String html = "";
         for(int i = 0; i < tokens.length-1; i=i+2) {

@@ -26,7 +26,12 @@ public class App implements RequestHandler<Object, Object> {
         try {
             String output = String.format("{ \"message\": \"hello world\", \"location\"}");
 
+            /*
+                Update 28 May 2020: decided to disable the scraper for FFM because the site
+                doesn't update its content anymore.
+             */
             // scrape
+            /*
             MatchListingsScraper scraper = new MatchListingsScraper();
 
             scraper.addSource("Bundesliga", "https://footballfullmatch.com/bundesliga/");
@@ -46,6 +51,7 @@ public class App implements RequestHandler<Object, Object> {
             scraper.setScrapeAll(scrapeAll);
 
             scraper.process();
+            */
 
             // build
             StaticWebsiteBuilder builder = new StaticWebsiteBuilder(StaticWebsiteBuilder.CLOUD);

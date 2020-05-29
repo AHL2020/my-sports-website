@@ -32,6 +32,8 @@ public class StaticWebsiteBuilder {
     private AmazonS3 s3 = null;
     HashMap<String, String> sources = null;
     private int pagesCreated = 0;
+    private int matchesPerPage = 10;
+    private int defaultNavSize = 5;
 
     public static int CLOUD = 0;
     public static int LOCAL = 1;
@@ -57,6 +59,7 @@ public class StaticWebsiteBuilder {
         builder.setPagesFolder("pages/");
         builder.setTemplatesFolder("templates/");
         builder.setOverwrite(false);
+        builder.setMatchesPerPage(10);
         builder.setFreemarkerTemplateDirectoryUrl("https://my-sports-website.s3.amazonaws.com");
 
         builder.build();
@@ -192,15 +195,51 @@ public class StaticWebsiteBuilder {
             System.out.println("create category pages ...");
             templateName = templatesFolder + "category.ftlh";
             for(Map.Entry<String, String> league : sources.entrySet()) {
-                dataModel.put("matches", getDataModelForCategory(league.getKey(), tmpAllData));
-                // set path
-                dataModel.put("path2", DataUtils.makePath(""));
-                htmlFileName = league.getKey() + ".html";
-                //set competition key
-                dataModel.put("competitionKey", DataUtils.makeCompetitionKey(league.getKey()));
 
-                createPage(dataModel, htmlFileName, relativePath, templateName, true);
+                // get number of matches in the category
+                int matchesCount = getAllMatchesByCompetition(league.getKey()).size();
+                //System.out.println("Competition: " + league.getKey());
+                //System.out.println("Matches: " + matchesCount);
+                // div it by e.g. 10 -> this gives us how many pages there are
+                double pagesD = Math.ceil((1.0 * matchesCount) / matchesPerPage);
+                int pages = (int)pagesD;
 
+                // how many max. buttons in the bottom page navigation
+                int navSize = this.defaultNavSize;
+                if(navSize > pages) navSize = pages;
+
+                //System.out.println("Matches p. page: " + matchesPerPage);
+                //System.out.println("Pages to create: " + pages);
+                // for each page (i):
+                for(int i = 0; i < pages; i++) {
+                    // get/set data model for the i-th page
+                    int indexBegin = matchesPerPage * i;
+                    int indexEnd = (matchesPerPage * (i+1)) > matchesCount ? matchesCount : (matchesPerPage * (i+1));
+                    //System.out.println("indexBegin: " + indexBegin);
+                    //System.out.println("indexEnd: " + indexEnd);
+                    dataModel.put("matches", getDataModelForCategory(league.getKey(), tmpAllData, indexBegin, indexEnd));
+
+                    // make and set the navigation
+                    dataModel.put("navigation", getDataModelForNav(league.getKey(), ".html", i, navSize, pages));
+
+                    // set path
+                    dataModel.put("path2", DataUtils.makePath(""));
+
+                    String TEST = ""; // todo: only for testing: "_TEST_";
+
+                    // make the filename
+                    if(i == 0) {
+                        htmlFileName = league.getKey() + TEST + ".html";
+                    } else {
+                        htmlFileName = league.getKey() + "-" + i + TEST + ".html";
+                    }
+
+                    //set competition key
+                    dataModel.put("competitionKey", DataUtils.makeCompetitionKey(league.getKey()));
+
+                    // create the page
+                    createPage(dataModel, htmlFileName, relativePath, templateName, true);
+                }
             }
 
             // create match pages
@@ -246,6 +285,68 @@ public class StaticWebsiteBuilder {
         }
     }
 
+    private HashMap<String, List<MatchBean>> getDataModelForNav(String pageKey, String fileExt, int currentPage, int navSize, int lastPage) {
+
+        //System.out.println("lastPage: " + lastPage);
+        //System.exit(0);
+
+        HashMap<String, List<MatchBean>> dataModel = new HashMap();
+        List<MatchBean> navList = new LinkedList();
+
+        if(fileExt.indexOf(".") != 0) {
+            fileExt = "." + fileExt;
+        }
+
+        // determine start page
+        int startPage = 0;
+        if (currentPage >= (lastPage - navSize/2)) {
+            startPage = lastPage - navSize;
+        } else if (currentPage > navSize / 2) {
+            startPage = currentPage - (navSize / 2);
+        } else {
+            startPage = 0;
+        }
+
+        // make the navigation
+        for (int i = 0; i < navSize; i++) {
+
+            MatchBean mb = new MatchBean();
+
+            int page = startPage + i;
+
+            // make links
+            String fileName = pageKey;
+            if (page == 0) {
+                fileName += fileExt;
+            } else {
+                fileName += "-" + page + fileExt;
+            }
+            mb.setMatchKey(fileName);
+
+            // set marker for active page
+            if (page == currentPage) {
+                mb.setMatchPairing("active");
+            }
+
+            // set previous, next, page-number labels
+            String label = "";
+            if (i == 0 && startPage > 0) {
+                label = "<<";
+            } else if (i == (navSize - 1) && page <= lastPage-navSize/2) {
+                label = ">>";
+            } else {
+                label = "" + (page + 1);
+            }
+            mb.setCompetition(label);
+
+            navList.add(mb);
+        }
+
+        dataModel.put("links", navList);
+
+        return dataModel;
+    }
+
     public String getFreemarkerTemplateDirectoryUrl() {
         return freemarkerTemplateDirectoryUrl;
     }
@@ -255,6 +356,7 @@ public class StaticWebsiteBuilder {
     }
 
     private boolean createPage(Map<String, HashMap<String,List<MatchBean>>> dataModel, String htmlFileName, String relativePath, String templateName, boolean overwrite) {
+
         try {
             //System.out.println("createPage: htmlFileName:[" + htmlFileName + "], overwrite: [" + overwrite + "]");
 
@@ -377,6 +479,26 @@ public class StaticWebsiteBuilder {
         HashMap<String,List<MatchBean>> tmpMap = new HashMap<String,List<MatchBean>>();
         List<MatchBean> tmpList = tmpAllData.get(category);
         tmpMap.put("matches", tmpList);
+        return tmpMap;
+    }
+
+    // to create pages with specific matches
+    // todo: test
+    private HashMap<String,List<MatchBean>> getDataModelForCategory(String category, HashMap<String,List<MatchBean>> tmpAllData, int indexStart, int indexEnd) {
+        HashMap<String,List<MatchBean>> tmpMap = new HashMap<String,List<MatchBean>>();
+        List<MatchBean> tmpList = tmpAllData.get(category);
+        List<MatchBean> tmpListReturn = new LinkedList<>();
+        try {
+            for(int i = indexStart; i < indexEnd; i++) {
+                tmpListReturn.add(tmpList.get(i));
+            }
+            tmpMap.put("matches", tmpListReturn);
+        } catch (Exception e) {
+            // if there is a problem, return data model with all matches in it
+            e.printStackTrace();
+            tmpMap.put("matches", tmpList);
+            return tmpMap;
+        }
         return tmpMap;
     }
 
@@ -503,5 +625,13 @@ public class StaticWebsiteBuilder {
 
     public void setOverwrite(boolean overwrite) {
         this.overwrite = overwrite;
+    }
+
+    public void setMatchesPerPage(int matchesPerPage) {
+        this.matchesPerPage = matchesPerPage;
+    }
+
+    public int getMatchesPerPage() {
+        return this.matchesPerPage;
     }
 }

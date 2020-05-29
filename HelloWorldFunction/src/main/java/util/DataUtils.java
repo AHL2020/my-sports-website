@@ -202,6 +202,46 @@ public class DataUtils {
         return map;
     }
 
+    /**
+     * the idea is to use this method as a 'hack' to set ad-hoc key/value pairs
+     * for the Freemarker template. E.g. if I want to tell the template to set
+     * 'Page 2 of 7' I can use this method for it.
+     * @param key: String
+     * @param value: String
+     * @return dataModel for Freemarker
+     */
+    // todo: test
+    public static HashMap<String, List<MatchBean>> setTemplateAttribute(String key, String value) {
+        HashMap<String, List<MatchBean>> map = new HashMap<String, List<MatchBean>>();
+        List<MatchBean> list = new LinkedList<MatchBean>();
+        MatchBean match = new MatchBean();
+        match.setMatchKey(value);
+        list.add(match);
+        map.put(key, list);
+        return map;
+    }
+
+    /**
+     * the idea is to use this method as a 'hack' to set ad-hoc key/value pairs
+     * for the Freemarker template. E.g. if I want to tell the template to set
+     * 'Page 2 of 7' I can use this method for it.
+     * @param key: String
+     * @param valueList: List<String>
+     * @return dataModel for Freemarker
+     */
+    // todo: test
+    public static HashMap<String, List<MatchBean>> setTemplateAttributeList(String key, List<String> valueList) {
+        HashMap<String, List<MatchBean>> map = new HashMap<String, List<MatchBean>>();
+        List<MatchBean> list = new LinkedList<MatchBean>();
+        for(String value: valueList) {
+            MatchBean match = new MatchBean();
+            match.setMatchKey(value);
+            list.add(match);
+        }
+        map.put(key, list);
+        return map;
+    }
+
     public static HashMap<String, List<MatchBean>> makeCompetitionKey(String competitionKey) {
         HashMap<String, List<MatchBean>> map = new HashMap<String, List<MatchBean>>();
         List<MatchBean> list = new LinkedList<MatchBean>();

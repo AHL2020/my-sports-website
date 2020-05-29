@@ -245,9 +245,18 @@ public class MatchBean implements Comparable<MatchBean> {
     }
 
     public int compareTo(MatchBean match) {
-        //return match.getMatchWeek().compareTo(this.getMatchWeek());
+
+        try {
+            Instant d1 = match.getScrapedDate();
+            Instant d2 = this.getScrapedDate();
+            return d1.compareTo(d2);
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+
         Date d1 = DataUtils.convertStringToDate(match.getDate());
         Date d2 = DataUtils.convertStringToDate(this.getDate());
         return d1.compareTo(d2);
+
     }
 }

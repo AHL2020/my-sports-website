@@ -2,6 +2,7 @@ package builder;
 
 import beans.MatchUrlBean;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
+import shared.ContentTypeManager;
 import util.DataUtils;
 import beans.MatchBean;
 import com.amazonaws.regions.Regions;
@@ -261,15 +262,40 @@ public class StaticWebsiteBuilder {
                                 match.setPageLastUpdatedDate(Instant.now());
                             }
                             match.setMatchUrlsAndTags(makeMatchUrlBean(match.getMatchUrls()));
-                            match.setPageCreatedDate(Instant.now());
                             dataModel.put("match", getDataModelForMatch(match));
-                            htmlFileName = match.getMatchKey() + ".html";
+
                             relativePath = pagesFolder + competition + "/";
                             //set competition key
                             //System.out.println(competition);
                             dataModel.put("competitionKey", DataUtils.makeCompetitionKey(competition));
-                            createPage(dataModel, htmlFileName, relativePath, templateName, overwrite);
-                            //System.out.print(".");
+
+                            // make the menu for the video links
+                            dataModel.put("videolinknav", getDataModelForVideoLinkNav(match));
+                            // loop over each video link
+                            List<MatchUrlBean> videoLinks = match.getMatchUrlsAndTags();
+                            System.out.println("[SWB][build] videoLinks: " + videoLinks);
+                            int pageCounter = 0;
+                            // for each video link, do:
+                            for(MatchUrlBean videoLink: videoLinks) {
+                                // 1. detect the video player type
+                                String videoLinkStr = videoLink.getMatchUrl();
+                                System.out.println("[SWB][build] videoLinkStr: " + videoLinkStr);
+                                String videoPlayer = ContentTypeManager.getVideoPlayer(videoLinkStr);
+                                System.out.println("[SWB][build] videoPlayer: " + videoPlayer);
+                                // 2. set the video player type to the data model
+                                dataModel.put("videoplayer", getDataModelForVideoPlayer(videoLinkStr, videoPlayer));
+                                // 3. update the match page name
+                                System.out.println("[SWB][build] pageCounter: " + pageCounter);
+                                if(pageCounter > 0) {
+                                    htmlFileName = match.getMatchKey() + "-" + pageCounter + ".html";
+                                } else {
+                                    htmlFileName = match.getMatchKey() + ".html";
+                                }
+                                System.out.println("[SWB][build] htmlFileName: " + htmlFileName);
+                                createPage(dataModel, htmlFileName, relativePath, templateName, overwrite);
+                                //System.out.print(".");
+                                pageCounter++;
+                            }
                         }
                     }
                 }
@@ -283,6 +309,47 @@ public class StaticWebsiteBuilder {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private HashMap<String, List<MatchBean>> getDataModelForVideoLinkNav(MatchBean match) {
+        HashMap<String, List<MatchBean>> dataModel = new HashMap();
+        List<MatchBean> videoLinkNav = new LinkedList();
+        List<MatchUrlBean> videoLinks = match.getMatchUrlsAndTags();
+        int counter = 0;
+        for(MatchUrlBean videoLink: videoLinks) {
+            MatchBean mb = new MatchBean();
+            String url = match.getMatchKey();
+            if(counter == 0) {
+                url = url + ".html";
+            } else {
+                url = url + "-" + counter + ".html";
+            }
+            mb.setMatchKey(url); // url
+            mb.setCompetition(videoLink.getMatchUrlLabel()); // label
+            videoLinkNav.add(mb);
+            counter++;
+        }
+        dataModel.put("videolinknav", videoLinkNav);
+        System.out.println("[SWB][getDataModelForVideoLinkNav] dataModel: " + dataModel);
+        return dataModel;
+    }
+
+    private HashMap<String, List<MatchBean>> getDataModelForVideoPlayer(String videoLink, String videoPlayer) {
+        HashMap<String, List<MatchBean>> dataModel = new HashMap();
+        List<MatchBean> matches = new LinkedList();
+        MatchBean mb = new MatchBean();
+
+        // for Vooplayer, we need to extract the player ID
+        String voo = "voo";
+        if(videoLink.contains(voo)) {
+            videoLink = videoLink.substring(videoLink.lastIndexOf("/")+1);
+        }
+
+        mb.setCompetition(videoLink);
+        mb.setMatchKey(videoPlayer);
+        matches.add(mb);
+        dataModel.put("videoplayer", matches);
+        return dataModel;
     }
 
     private HashMap<String, List<MatchBean>> getDataModelForNav(String pageKey, String fileExt, int currentPage, int navSize, int lastPage) {
@@ -572,9 +639,21 @@ public class StaticWebsiteBuilder {
         }
 
         String[] tokens = urls.split(",");
-        String html = "";
+        //String html = "";
         for(int i = 0; i < tokens.length-1; i=i+2) {
-            list.add(new MatchUrlBean(tokens[i], tokens[i+1]));
+            // url, label
+            String url = tokens[i];
+            //String url = "";
+            //if(i == 0) {
+            //    url = pageName;
+            //} else {
+            //    url = pageName + "-" + i + "";
+            //}
+            System.out.println("[SWB][makeMatchUrlBean] url: " + url);
+            //url = url + ".html";
+            String label = tokens[i+1];
+            System.out.println("[SWB][makeMatchUrlBean] label: " + label);
+            list.add(new MatchUrlBean(url, label));
         }
         return list;
     }

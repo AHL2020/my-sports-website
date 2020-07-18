@@ -16,6 +16,12 @@
             <DeploySamConfig>
               <option name="autoExecute" value="true" />
               <option name="bucketName" value="ahlandberg-sam-code-repo" />
+              <option name="enabledCapabilities">
+                <list>
+                  <option value="IAM" />
+                  <option value="NAMED_IAM" />
+                </list>
+              </option>
               <option name="stackName" value="Serverless-Project-01-Stack" />
             </DeploySamConfig>
           </value>

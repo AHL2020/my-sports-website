@@ -110,7 +110,8 @@ public class SEOGenerator {
                         addFeed(WebPage.rssBuilder()
                         .pubDate(timestamp)
                         .title(escapedTitle)
-                        .description(mb.getCompetition() + " - " + mb.getMatchWeek() + " - " + mb.getDate())
+                        //.description(mb.getCompetition() + " - " + mb.getMatchWeek() + " - " + mb.getDate())
+                        .description(mb.getCompetition() + " - " + mb.getDate())
                         .link(relativePath + "/" + fileName)
                         .build());
             }

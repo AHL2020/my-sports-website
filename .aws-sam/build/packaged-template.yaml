@@ -12,7 +12,7 @@ Resources:
   HelloWorldFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://ahlandberg-sam-code-repo/679beddd05237e9f40b47e4863d1ab81
+      CodeUri: s3://ahlandberg-sam-code-repo/92a708cc492165eb7920eb06ddd4d388
       Handler: helloworld.App::handleRequest
       Runtime: java8
       MemorySize: 512
